@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class BLEUIManager : MonoBehaviour
 {
@@ -20,10 +21,35 @@ public class BLEUIManager : MonoBehaviour
     //scrollview
     public RectTransform uiBeaconContainer;
     public GameObject beaconInfoTemplate;
+    public Button scanTriggerButton;
+
+    public bool isScanningOn;
+
+    private void Start()
+    {
+        scanTriggerButton.onClick.AddListener(() => {
+            isScanningOn = !isScanningOn;
+            BLEManager.Instance.TriggerScan(isScanningOn);
+        });
+        BLEManager.Instance.startScanEvent += () =>
+        {
+            isScanningOn = true;
+            scanTriggerButton.GetComponentInChildren<TextMeshProUGUI>().text = "Scanning... Stop Now";
+        };
+        BLEManager.Instance.stopScanEvent += () =>
+        {
+            isScanningOn = false;
+            scanTriggerButton.GetComponentInChildren<TextMeshProUGUI>().text = "Start Scan";
+        };
+        BLEManager.Instance.onUpdateBeaconEvent += (beacon) => UpdateDeviceUI(beacon);
+        BLEManager.Instance.onNewBeaconEvent += (beacon) => AddDeviceUI(beacon);
+        BLEManager.Instance.onGoneBeaconEvent += (beacon) => RemoveDeviceUI(beacon);
+    }
 
 
     public void AddDeviceUI(BRTBeacon beacon)
     {
+        Debug.Log("AddDeviceUI");
         string beaconName = beacon.macAddress.Replace("-", "");
         RectTransform beaconInfo = GameObject.Instantiate(beaconInfoTemplate).GetComponent<RectTransform>();
         beaconInfo.Find("UUID").GetComponent<TextMeshProUGUI>().text = "UUID: " + beacon.uuid;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Newtonsoft.Json;
+using System;
 
 public class BLEManager : MonoBehaviour
 {
@@ -24,6 +25,13 @@ public class BLEManager : MonoBehaviour
         }
     }
 
+    public delegate void scanEvent();
+    public event scanEvent startScanEvent;
+    public event scanEvent stopScanEvent;
+    public delegate void scanUpdateEvent(BRTBeacon beacon);
+    public event scanUpdateEvent onUpdateBeaconEvent;
+    public event scanUpdateEvent onNewBeaconEvent;
+    public event scanUpdateEvent onGoneBeaconEvent;
 
     public static float N_FACTOR = 4f;
     public static AndroidJavaObject bleLib = null;
@@ -38,44 +46,55 @@ public class BLEManager : MonoBehaviour
         bleLib = ble.CallStatic<AndroidJavaObject>("getInstance");
     }
 
-    public void StartScan()
+    public void TriggerScan(bool isOn)
     {
+        if (isOn)
+        {
+            startScanEvent.Invoke();
 #if !UNITY_EDITOR && UNITY_ANDROID
-        bleLib.Call("startBTScan");
+            bleLib.Call("startBTScan");
 #endif
+        }
+        else
+        {
+            stopScanEvent?.Invoke();
+#if !UNITY_EDITOR && UNITY_ANDROID
+            bleLib.Call("stopBTScan");
+#endif
+        }
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        Debug.Log("****************OnApplicationPause: " + pause + "*****************");
+        TriggerScan(!pause);
     }
 
     //Message receive from java jar, gameobject name must be "BLEObject" currently
     public void onUpdateBeacon(string message)
     {
         List<BRTBeacon> beacons = JsonConvert.DeserializeObject<List<BRTBeacon>>(message);
-        updateDevice(beacons);
+        foreach (var beacon in beacons)
+        {
+            //if (beacon.isBrightBeacon)
+            {
+                string name = beacon.macAddress.Replace("-", "");
+                if (beaconTable.ContainsKey(name))
+                {
+                    beacon.distance = RSSIToDistance(beacon);
+                    beaconTable[name] = beacon;
+                    onUpdateBeaconEvent?.Invoke(beacon);
+                }
+            }
+        }
     }
 
     //Message receive from java jar, gameobject name must be "BLEObject" currently
     public void onNewBeacon(string message)
     {
         BRTBeacon beacon = JsonConvert.DeserializeObject<BRTBeacon>(message);
-        addDevice(beacon);
-    }
-
-    //Message receive from java jar, gameobject name must be "BLEObject" currently
-    public void onGoneBeacon(string message)
-    {
-        BRTBeacon beacon = JsonConvert.DeserializeObject<BRTBeacon>(message);
-        removeDevice(beacon);
-    }
-
-    //Message receive from java jar, gameobject name must be "BLEObject" currently
-    public void onLogMessage(string message)
-    {
-        Debug.Log(message);
-    }
-
-    private void addDevice(BRTBeacon beacon)
-    {
-        if (!beacon.isBrightBeacon)
-            return;
+        //if (!beacon.isBrightBeacon)
+        //    return;
 
         string name = beacon.macAddress.Replace("-", "");
         if (beaconTable.ContainsKey(name))
@@ -83,37 +102,28 @@ public class BLEManager : MonoBehaviour
 
         beacon.distance = RSSIToDistance(beacon);
         beaconTable.Add(name, beacon);
-        BLEUIManager.Instance.AddDeviceUI(beacon);
+        onNewBeaconEvent?.Invoke(beacon);
     }
 
-    private void removeDevice(BRTBeacon beacon)
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
+    public void onGoneBeacon(string message)
     {
-        if (!beacon.isBrightBeacon)
-            return;
+        BRTBeacon beacon = JsonConvert.DeserializeObject<BRTBeacon>(message);
+        //if (!beacon.isBrightBeacon)
+        //    return;
 
         string name = beacon.macAddress.Replace("-", "");
         if (!beaconTable.ContainsKey(name))
             return;
 
         beaconTable.Remove(name);
-        BLEUIManager.Instance.RemoveDeviceUI(beacon);
+        onGoneBeaconEvent?.Invoke(beacon);
     }
 
-    private void updateDevice(List<BRTBeacon> beacons)
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
+    public void onLogMessage(string message)
     {
-        foreach (var beacon in beacons)
-        {
-            if (beacon.isBrightBeacon)
-            {
-                string name = beacon.macAddress.Replace("-", "");
-                if (beaconTable.ContainsKey(name))
-                {
-                    beacon.distance = RSSIToDistance(beacon);
-                    beaconTable[name] = beacon;
-                    BLEUIManager.Instance.UpdateDeviceUI(beacon);
-                }
-            }
-        }
+        Debug.Log(message);
     }
 
     public static float RSSIToDistance(BRTBeacon beaconInfo)

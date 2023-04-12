@@ -71,28 +71,17 @@ public class BLEApplication extends UnityPlayerActivity {
         UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "Initialize Completed");
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onResume");
-        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
-            startScan();
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onPause");
-        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
-            stopScan();
-        }
-    }
-
     public void startBTScan() {
         if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
             UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "startBTScan");
             startScan();
+        }
+    }
+
+    public void stopBTScan() {
+        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "stopBTScan");
+            stopScan();
         }
     }
 
@@ -123,16 +112,25 @@ public class BLEApplication extends UnityPlayerActivity {
             }
 
              */
+            ArrayList<BRTBeacon> newBeacons = new ArrayList<BRTBeacon>();
+            for(int i = 0; i < arg0.size(); i++)
+                if (arg0.get((i)).isBrightBeacon)
+                    newBeacons.add(arg0.get(i));
 
+            if (newBeacons.size() == 0)
+                return;
 
             Gson gson = new Gson();
-            String devices_info = gson.toJson((List)arg0);
+            String devices_info = gson.toJson(arg0);
             UnityPlayer.UnitySendMessage("BLEObject", "onUpdateBeacon", devices_info);
         }
 
         @Override
         public void onNewBeacon(BRTBeacon arg0) {
-            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onNewBeacon");
+            if (!arg0.isBrightBeacon)
+                return;
+
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onNewBeacon: isBRT=" + arg0.isBrightBeacon);
 
             Gson gson = new Gson();
             String device_info = gson.toJson(arg0);
@@ -141,7 +139,10 @@ public class BLEApplication extends UnityPlayerActivity {
 
         @Override
         public void onGoneBeacon(BRTBeacon arg0) {
-            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onGoneBeacon");
+            if (!arg0.isBrightBeacon)
+                return;
+
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onGoneBeacon: isBRT=" + arg0.isBrightBeacon);
             Gson gson = new Gson();
             String device_info = gson.toJson(arg0);
             UnityPlayer.UnitySendMessage("BLEObject", "onGoneBeacon", device_info);

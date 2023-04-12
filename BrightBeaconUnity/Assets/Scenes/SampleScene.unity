@@ -234,7 +234,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -171.56657}
+  m_AnchoredPosition: {x: 0, y: -171.56648}
   m_SizeDelta: {x: 0, y: -753}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &395614360
@@ -575,8 +575,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 948269572}
   m_HandleRect: {fileID: 948269571}
   m_Direction: 2
-  m_Value: -0.000000111685964
-  m_Size: 0.29507527
+  m_Value: -0.00000033505788
+  m_Size: 0.2950752
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -626,6 +626,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 8661937088456981264, guid: 2ffcb4df7547d4aa4a4e4f708abec10f, type: 3}
+      propertyPath: scanTriggerButton
+      value: 
+      objectReference: {fileID: 963216884}
     - target: {fileID: 8661937088456981264, guid: 2ffcb4df7547d4aa4a4e4f708abec10f, type: 3}
       propertyPath: uiBeaconContainer
       value: 
