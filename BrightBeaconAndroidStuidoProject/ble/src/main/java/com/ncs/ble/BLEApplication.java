@@ -44,38 +44,37 @@ public class BLEApplication extends UnityPlayerActivity {
         if (mInstance == null) {
             mInstance = new BLEApplication();
         }
-        /*
-        if (!mContext.getPackageManager().hasSystemFeature("android.hardware.bluetooth_le")) {
-            Toast.makeText(mContext, "BLE Not Supported",
-                    Toast.LENGTH_SHORT).show();
-        }
-        */
-
         return mInstance;
     }
 
     public BLEApplication() {
-        UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "Initialize Started");
+        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "Initialize Started");
 
         mContext = UnityPlayer.currentActivity.getApplicationContext();
         // 单例
         mBeaconManager = BRTBeaconManager.getInstance(mContext);
         // 注册应用 APPKEY申请地址 http://brtbeacon.com/main/index.shtml
         mBeaconManager.registerApp("3d76046a7c5b49dcaf0f4e193b7f844d");
+        // 设置Beacon信息更新频率为 200 毫秒
+        mBeaconManager.setRangingTime(100);
+        // 如果在 15 秒内没有再次扫描到这个设备,，则会回调onGoneBeacon
+        mBeaconManager.setExpirationTime(15000);
+
+        mBeaconManager.setPowerMode(BRTBeaconManager.POWER_MODE_LOW_POWER);
         // 开启Beacon扫描服务
-        //beaconManager.startService();
+        //mBeaconManager.startService();
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         mBluetoothAdapter.enable();
-        UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "Initialize bluetooth: " + mBluetoothAdapter.isEnabled());
+        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "Initialize bluetooth: " + (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()));
 
         checkPermission(UnityPlayer.currentActivity.getApplicationContext(), UnityPlayer.currentActivity);
-        UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "Initialize Completed");
+        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "Initialize Completed");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "onResume");
+        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onResume");
         if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
             startScan();
         }
@@ -84,7 +83,7 @@ public class BLEApplication extends UnityPlayerActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "onPause");
+        UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onPause");
         if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
             stopScan();
         }
@@ -92,7 +91,7 @@ public class BLEApplication extends UnityPlayerActivity {
 
     public void startBTScan() {
         if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
-            UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "start scan");
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "startBTScan");
             startScan();
         }
     }
@@ -118,8 +117,8 @@ public class BLEApplication extends UnityPlayerActivity {
                 String device_info = gson.toJson(arg0.get(i));
                 if (arg0.get(i).uuid != "00000000-0000-0000-0000-000000000000" || !arg0.get(i).uuid.equals("00000000-0000-0000-0000-000000000000"))
                 {
-                    //UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "---------------------" + device_info);
-                    UnityPlayer.UnitySendMessage("Main Camera", "onUpdateBeacon", device_info);
+                    //UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "---------------------" + device_info);
+                    UnityPlayer.UnitySendMessage("BLEObject", "onUpdateBeacon", device_info);
                 }
             }
 
@@ -128,22 +127,24 @@ public class BLEApplication extends UnityPlayerActivity {
 
             Gson gson = new Gson();
             String devices_info = gson.toJson((List)arg0);
-            UnityPlayer.UnitySendMessage("Main Camera", "onUpdateBeacon", devices_info);
-
+            UnityPlayer.UnitySendMessage("BLEObject", "onUpdateBeacon", devices_info);
         }
 
         @Override
         public void onNewBeacon(BRTBeacon arg0) {
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onNewBeacon");
+
             Gson gson = new Gson();
             String device_info = gson.toJson(arg0);
-            UnityPlayer.UnitySendMessage("Main Camera", "onNewBeacon", device_info);
+            UnityPlayer.UnitySendMessage("BLEObject", "onNewBeacon", device_info);
         }
 
         @Override
         public void onGoneBeacon(BRTBeacon arg0) {
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "onGoneBeacon");
             Gson gson = new Gson();
             String device_info = gson.toJson(arg0);
-            UnityPlayer.UnitySendMessage("Main Camera", "onGoneBeacon", device_info);
+            UnityPlayer.UnitySendMessage("BLEObject", "onGoneBeacon", device_info);
         }
 
         @Override
@@ -176,7 +177,7 @@ public class BLEApplication extends UnityPlayerActivity {
             if (permissionNeedRequest.isEmpty()) {
                 return;
             }
-            UnityPlayer.UnitySendMessage("Main Camera", "OnLogMessage", "checkPermission");
+            UnityPlayer.UnitySendMessage("BLEObject", "onLogMessage", "checkPermission");
             activity.requestPermissions(permissionNeedRequest.toArray(new String[0]), BRTMAP_PERMISSION_CODE);
         }
     }

@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using Newtonsoft.Json;
 
 public class BLEManager : MonoBehaviour
@@ -25,13 +24,10 @@ public class BLEManager : MonoBehaviour
         }
     }
 
-    public RectTransform uiBeaconContainer;
-    public GameObject beaconInfoTemplate;
 
+    public static float N_FACTOR = 4f;
     public static AndroidJavaObject bleLib = null;
     public Dictionary<string, BRTBeacon> beaconTable = new Dictionary<string, BRTBeacon>();
-
-    private float N_FACTOR = 4f;
 
 
     // Start is called before the first frame update
@@ -49,29 +45,29 @@ public class BLEManager : MonoBehaviour
 #endif
     }
 
-    //Message receive from java jar, gameobject name must be "Main Camera" currently
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
     public void onUpdateBeacon(string message)
     {
         List<BRTBeacon> beacons = JsonConvert.DeserializeObject<List<BRTBeacon>>(message);
         updateDevice(beacons);
     }
 
-    //Message receive from java jar, gameobject name must be "Main Camera" currently
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
     public void onNewBeacon(string message)
     {
         BRTBeacon beacon = JsonConvert.DeserializeObject<BRTBeacon>(message);
         addDevice(beacon);
     }
 
-    //Message receive from java jar, gameobject name must be "Main Camera" currently
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
     public void onGoneBeacon(string message)
     {
         BRTBeacon beacon = JsonConvert.DeserializeObject<BRTBeacon>(message);
         removeDevice(beacon);
     }
 
-    //Message receive from java jar, gameobject name must be "Main Camera" currently
-    public void OnLogMessage(string message)
+    //Message receive from java jar, gameobject name must be "BLEObject" currently
+    public void onLogMessage(string message)
     {
         Debug.Log(message);
     }
@@ -85,22 +81,9 @@ public class BLEManager : MonoBehaviour
         if (beaconTable.ContainsKey(name))
             return;
 
+        beacon.distance = RSSIToDistance(beacon);
         beaconTable.Add(name, beacon);
-        RectTransform beaconInfo = GameObject.Instantiate(beaconInfoTemplate).GetComponent<RectTransform>();
-        beaconInfo.Find("UUID").GetComponent<TextMeshProUGUI>().text = "UUID: " + beacon.uuid;
-        beaconInfo.Find("Name").GetComponent<TextMeshProUGUI>().text = "Name: " + beacon.name;
-        beaconInfo.Find("RSSI").GetComponent<TextMeshProUGUI>().text = "RSSI: " + beacon.rssi;
-        beaconInfo.Find("MPower").GetComponent<TextMeshProUGUI>().text = "MPower: " + beacon.measuredPower;
-        beaconInfo.Find("MAC").GetComponent<TextMeshProUGUI>().text = "MAC: " + beacon.macAddress;
-        beaconInfo.Find("DIS").GetComponent<TextMeshProUGUI>().text = "Distance: " + RSSIToDistance(beacon);
-        beaconInfo.name = name;
-
-
-        beaconInfo.GetComponent<RectTransform>().SetParent(uiBeaconContainer);
-        uiBeaconContainer.sizeDelta = new Vector2(uiBeaconContainer.sizeDelta.x, uiBeaconContainer.sizeDelta.y + 200);
-        beaconInfo.SetAsFirstSibling();
-        beaconInfo.localScale = Vector3.one;
-
+        BLEUIManager.Instance.AddDeviceUI(beacon);
     }
 
     private void removeDevice(BRTBeacon beacon)
@@ -113,9 +96,7 @@ public class BLEManager : MonoBehaviour
             return;
 
         beaconTable.Remove(name);
-
-        DestroyImmediate(uiBeaconContainer.Find(name).gameObject);
-        uiBeaconContainer.sizeDelta = new Vector2(uiBeaconContainer.sizeDelta.x, uiBeaconContainer.sizeDelta.y - 200);
+        BLEUIManager.Instance.RemoveDeviceUI(beacon);
     }
 
     private void updateDevice(List<BRTBeacon> beacons)
@@ -127,16 +108,15 @@ public class BLEManager : MonoBehaviour
                 string name = beacon.macAddress.Replace("-", "");
                 if (beaconTable.ContainsKey(name))
                 {
+                    beacon.distance = RSSIToDistance(beacon);
                     beaconTable[name] = beacon;
-                    RectTransform beaconInfo = uiBeaconContainer.Find(name).GetComponent<RectTransform>();
-                    beaconInfo.Find("RSSI").GetComponent<TextMeshProUGUI>().text = "RSSI: " + beacon.rssi;
-                    beaconInfo.Find("DIS").GetComponent<TextMeshProUGUI>().text = "Distance: " + RSSIToDistance(beacon);
+                    BLEUIManager.Instance.UpdateDeviceUI(beacon);
                 }
             }
         }
     }
 
-    private float RSSIToDistance(BRTBeacon beaconInfo)
+    public static float RSSIToDistance(BRTBeacon beaconInfo)
     {
         if (beaconInfo.rssi == 0)
         {
@@ -165,4 +145,6 @@ public class BRTBeacon
     public bool isBrightBeacon;
     public int hardwareType;
     public int firmwareNum;
+    [JsonIgnore]
+    public float distance;
 }
